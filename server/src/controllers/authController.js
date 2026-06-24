@@ -1,0 +1,13 @@
+import crypto from 'crypto';
+import User from '../models/User.js';
+import AppError from '../utils/AppError.js';
+import asyncHandler from '../utils/asyncHandler.js';
+import { signToken } from '../utils/token.js';
+import { sendEmail } from '../utils/email.js';
+const sanitize = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, region: user.region, landArea: user.landArea, soilType: user.soilType });
+const respondAuth = (user, status, res) => res.status(status).json({ success: true, data: { token: signToken(user._id), user: sanitize(user) } });
+export const register = asyncHandler(async (req, res) => { const existing = await User.findOne({ email: req.body.email }); if (existing) throw new AppError('An account with this email already exists', 409); const user = await User.create(req.body); respondAuth(user, 201, res); });
+export const login = asyncHandler(async (req, res) => { const user = await User.findOne({ email: req.body.email }).select('+password'); if (!user || !(await user.comparePassword(req.body.password))) throw new AppError('Invalid email or password', 401); respondAuth(user, 200, res); });
+export const getMe = asyncHandler(async (req, res) => res.json({ success: true, data: { user: sanitize(req.user) } }));
+export const forgotPassword = asyncHandler(async (req, res) => { const user = await User.findOne({ email: req.body.email }); if (!user) return res.json({ success: true, message: 'If that account exists, a reset email has been sent.' }); const rawToken = crypto.randomBytes(32).toString('hex'); user.resetPasswordToken = crypto.createHash('sha256').update(rawToken).digest('hex'); user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; await user.save({ validateBeforeSave: false }); const url = `${process.env.CLIENT_URL}/reset-password/${rawToken}`; await sendEmail({ to: user.email, subject: 'Reset your Digital Krishi Mytra password', text: `Use this link within 15 minutes: ${url}` }); res.json({ success: true, message: 'If that account exists, a reset email has been sent.' }); });
+export const resetPassword = asyncHandler(async (req, res) => { const hashed = crypto.createHash('sha256').update(req.params.token).digest('hex'); const user = await User.findOne({ resetPasswordToken: hashed, resetPasswordExpires: { $gt: Date.now() } }).select('+password'); if (!user) throw new AppError('Reset link is invalid or has expired', 400); user.password = req.body.password; user.resetPasswordToken = undefined; user.resetPasswordExpires = undefined; await user.save(); respondAuth(user, 200, res); });

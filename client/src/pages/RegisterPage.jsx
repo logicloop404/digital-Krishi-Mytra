@@ -1,0 +1,12 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { Leaf } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+
+export default function RegisterPage() {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm(); const { login } = useAuth(); const navigate = useNavigate();
+  const submit = async (values) => { try { const { data } = await api.post('/auth/register', { ...values, landArea: Number(values.landArea) || 0 }); login(data.data); toast.success('Your farmer account is ready'); navigate('/'); } catch (error) { toast.error(error.response?.data?.message || 'Unable to create account'); } };
+  return <main className="min-h-screen bg-forest-50 p-5 sm:p-10"><section className="mx-auto max-w-3xl"><Link to="/login" className="flex items-center gap-2 font-bold text-forest-700"><Leaf /> Digital Krishi Mytra</Link><div className="panel mt-8 p-6 sm:p-8"><h1 className="text-2xl font-bold text-slate-900">Create farmer account</h1><p className="mt-1 text-sm text-slate-500">A few details help us tailor advice to your farm.</p><form className="mt-7 grid gap-5 sm:grid-cols-2" onSubmit={handleSubmit(submit)}>{[['name', 'Full name', 'text'], ['email', 'Email address', 'email'], ['phone', 'Phone number', 'tel'], ['region', 'District / region', 'text'], ['landArea', 'Land area (acres)', 'number'], ['password', 'Password (minimum 8 characters)', 'password']].map(([name, label, type]) => <label key={name}><span className="field-label">{label}</span><input className="field" type={type} {...register(name, { required: `${label} is required`, minLength: name === 'password' ? { value: 8, message: 'Use at least 8 characters' } : undefined })} />{errors[name] && <small className="mt-1 block text-clay-600">{errors[name].message}</small>}</label>)}<label><span className="field-label">Primary soil type</span><select className="field" {...register('soilType')}><option>Black soil</option><option>Alluvial soil</option><option>Red soil</option><option>Laterite soil</option></select></label><div className="flex items-end"><button disabled={isSubmitting} className="btn-primary w-full">{isSubmitting ? 'Creating account...' : 'Create account'}</button></div></form><p className="mt-6 text-center text-sm text-slate-500">Already have an account? <Link className="font-semibold text-forest-700 hover:underline" to="/login">Sign in</Link></p></div></section></main>;
+}
