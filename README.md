@@ -2,7 +2,7 @@
 
 Digital Krishi Mytra is a production-oriented MERN smart agricultural advisory platform. It brings weather-aware crop planning, government scheme discovery, community support, and crop-leaf disease screening into a dashboard designed for Indian farmers.
 
-![Digital Krishi Mytra dashboard](client/public/farm-landscape.png)
+
 
 ## Features
 
